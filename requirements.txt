@@ -1,0 +1,7 @@
+deep_sort_realtime
+ipykernel
+ultralytics
+matplotlib
+pandas
+gdown
+tensorboard
