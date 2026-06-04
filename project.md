@@ -69,3 +69,18 @@ This document compiles the core engineering trade-offs, architectural decisions,
   * $D < 10$: High confidence alert (immediate response).
   * $10 \le D < 17$: Medium confidence alert (operator checks feed).
   * $17 \le D < 22$: Low confidence log entry (no alert).
+
+---
+
+## 🔄 Post-Processing & Re-Ranking
+
+### Q8: Your codebase imports a re-ranking utility (`torchreid/utils/rerank.py` & `GPU-Re-Ranking`). What is Re-ranking and how does it help?
+* **The Concept**: Pairwise distance matching only measures query-to-gallery distance. **k-reciprocal re-ranking** utilizes the relationship between gallery images. If Candidate A is the nearest neighbor of Query Q, and Query Q is also the nearest neighbor of Candidate A (reciprocal relationship), the match confidence is extremely high.
+* **How it works mathematically**:
+  1. Calculate initial Euclidean distance between the query and all gallery candidates.
+  2. For the query and top candidates, compute their $k$-reciprocal candidate sets.
+  3. Calculate the Jaccard distance between the reciprocal neighbor sets.
+  4. Combine the original Euclidean distance with the Jaccard distance to form the final re-ranked distance score.
+* **Why it matters**: It drastically reduces false positives caused by background clutter or static illumination bias. It acts as an unsupervised domain adaptation step.
+* **The GPU Acceleration Hook**: Re-ranking is highly $O(N^2)$ computationally expensive. Your codebase features a custom CUDA implementation (`GPU-Re-Ranking`) using GNN label propagation. This shifts the Jaccard matrix calculation to GPU kernels, bringing execution times down from seconds (on CPU) to milliseconds, enabling it to fit within a real-time streaming pipeline.
+
